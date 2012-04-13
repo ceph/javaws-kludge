@@ -1,0 +1,55 @@
+#!/usr/bin/python
+import os
+import shutil
+import sys
+import subprocess
+import tempfile
+
+def find_jnlp(path):
+    for filename in os.listdir(path):
+        if (filename.startswith('viewer.jnlp(')
+            and filename.endswith(')')):
+            return os.path.join(path, filename)
+        if (filename.startswith('jviewer')
+            and filename.endswith('.jnlp')):
+            return os.path.join(path, filename)
+    return None
+
+if __name__ == '__main__':
+    PROG = os.path.basename(sys.argv[0])
+    path = os.path.expanduser('~/Downloads')
+    jnlp = find_jnlp(path)
+    if jnlp is None:
+        print >>sys.stderr, '{prog}: No viewer.jnlp files found in {path}'.format(
+            prog=PROG,
+            path=path,
+            )
+        sys.exit(1)
+    with tempfile.NamedTemporaryFile(
+        prefix='javaws-kludge.',
+        suffix='.jnlp',
+        ) as f:
+        with file(jnlp, 'rb') as j:
+            shutil.copyfileobj(j, f)
+        os.unlink(jnlp)
+        f.seek(0)
+        env = {}
+        env.update(os.environ)
+        if os.path.basename(jnlp).startswith('viewer.jnlp'):
+            # work around iDRAC6 bug
+            so_path = os.path.join(
+                os.path.dirname(sys.argv[0]),
+                'idrac-kvm-keyboard-fix',
+                'keycode-hack.so',
+                )
+            if not os.path.exists(so_path):
+                print >>sys.stderr, '{prog}: Keyboard kludge not found, run bootstrap: {so_path}'.format(
+                    prog=PROG,
+                    so_path=so_path,
+                    )
+                sys.exit(1)
+            env['LD_PRELOAD'] = so_path
+        subprocess.check_call(
+            args=['javaws', f.name],
+            env=env,
+            )
