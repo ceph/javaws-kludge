@@ -38,7 +38,7 @@ if __name__ == '__main__':
         if os.path.basename(jnlp).startswith('viewer.jnlp'):
             # work around iDRAC6 bug
             so_path = os.path.join(
-                os.path.dirname(sys.argv[0]),
+                os.path.dirname(os.path.realpath(sys.argv[0])),
                 'idrac-kvm-keyboard-fix',
                 'keycode-hack.so',
                 )
